@@ -1,0 +1,307 @@
+version: '3.9'
+
+networks:
+  novapay:
+    driver: bridge
+
+volumes:
+  account-db-data:
+  transaction-db-data:
+  ledger-db-data:
+  fx-db-data:
+  payroll-db-data:
+  admin-db-data:
+  redis-data:
+  grafana-data:
+  prometheus-data:
+
+services:
+
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - novapay
+    depends_on:
+      - account-service
+      - transaction-service
+      - ledger-service
+      - fx-service
+      - payroll-service
+      - admin-service
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:4.8.1
+    ports:
+      - "8080:8080"
+    networks:
+      - novapay
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: account-db
+
+  account-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: account_db
+      POSTGRES_USER: novapay
+      POSTGRES_PASSWORD: novapay
+    volumes:
+      - account-db-data:/var/lib/postgresql/data
+    networks:
+      - novapay
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novapay -d account_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  transaction-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: transaction_db
+      POSTGRES_USER: novapay
+      POSTGRES_PASSWORD: novapay
+    volumes:
+      - transaction-db-data:/var/lib/postgresql/data
+    networks:
+      - novapay
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novapay -d transaction_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ledger-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ledger_db
+      POSTGRES_USER: novapay
+      POSTGRES_PASSWORD: novapay
+    volumes:
+      - ledger-db-data:/var/lib/postgresql/data
+    networks:
+      - novapay
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novapay -d ledger_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  fx-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fx_db
+      POSTGRES_USER: novapay
+      POSTGRES_PASSWORD: novapay
+    volumes:
+      - fx-db-data:/var/lib/postgresql/data
+    networks:
+      - novapay
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novapay -d fx_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  payroll-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: payroll_db
+      POSTGRES_USER: novapay
+      POSTGRES_PASSWORD: novapay
+    volumes:
+      - payroll-db-data:/var/lib/postgresql/data
+    networks:
+      - novapay
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novapay -d payroll_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  admin-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: admin_db
+      POSTGRES_USER: novapay
+      POSTGRES_PASSWORD: novapay
+    volumes:
+      - admin-db-data:/var/lib/postgresql/data
+    networks:
+      - novapay
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novapay -d admin_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - novapay
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  account-service:
+    build:
+      context: ../services/account-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://novapay:novapay@account-db:5432/account_db
+      PORT: 3001
+      NODE_ENV: production
+      ENCRYPTION_MASTER_KEY: change-me-in-production-32chars!!
+    networks:
+      - novapay
+    depends_on:
+      account-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  transaction-service:
+    build:
+      context: ../services/transaction-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://novapay:novapay@transaction-db:5432/transaction_db
+      REDIS_URL: redis://redis:6379
+      ACCOUNT_SERVICE_URL: http://account-service:3001
+      LEDGER_SERVICE_URL: http://ledger-service:3003
+      FX_SERVICE_URL: http://fx-service:3004
+      PORT: 3002
+      NODE_ENV: production
+    networks:
+      - novapay
+    depends_on:
+      transaction-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ledger-service:
+    build:
+      context: ../services/ledger-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://novapay:novapay@ledger-db:5432/ledger_db
+      PORT: 3003
+      NODE_ENV: production
+    networks:
+      - novapay
+    depends_on:
+      ledger-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  fx-service:
+    build:
+      context: ../services/fx-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://novapay:novapay@fx-db:5432/fx_db
+      REDIS_URL: redis://redis:6379
+      PORT: 3004
+      NODE_ENV: production
+    networks:
+      - novapay
+    depends_on:
+      fx-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  payroll-service:
+    build:
+      context: ../services/payroll-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://novapay:novapay@payroll-db:5432/payroll_db
+      REDIS_URL: redis://redis:6379
+      TRANSACTION_SERVICE_URL: http://transaction-service:3002
+      PORT: 3005
+      NODE_ENV: production
+    networks:
+      - novapay
+    depends_on:
+      payroll-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  admin-service:
+    build:
+      context: ../services/admin-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://novapay:novapay@admin-db:5432/admin_db
+      ACCOUNT_SERVICE_URL: http://account-service:3001
+      TRANSACTION_SERVICE_URL: http://transaction-service:3002
+      LEDGER_SERVICE_URL: http://ledger-service:3003
+      PORT: 3006
+      NODE_ENV: production
+    networks:
+      - novapay
+    depends_on:
+      admin-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - novapay
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - novapay
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - novapay
+    restart: unless-stopped
