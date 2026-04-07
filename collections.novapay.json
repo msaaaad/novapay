@@ -1,0 +1,842 @@
+{
+  "info": {
+    "name": "NovaPay API",
+    "description": "Complete API collection for NovaPay — test all 6 services in order",
+    "_postman_id": "novapay-collection-v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost", "type": "string" },
+    { "key": "senderWalletId", "value": "", "type": "string" },
+    { "key": "recipientWalletId", "value": "", "type": "string" },
+    { "key": "senderUserId", "value": "a0000000-0000-0000-0000-000000000001", "type": "string" },
+    { "key": "recipientUserId", "value": "a0000000-0000-0000-0000-000000000002", "type": "string" },
+    { "key": "transactionId", "value": "", "type": "string" },
+    { "key": "fxQuoteId", "value": "", "type": "string" },
+    { "key": "payrollJobId", "value": "", "type": "string" },
+    { "key": "employerId", "value": "e0000000-0000-0000-0000-000000000001", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. Health Checks",
+      "item": [
+        {
+          "name": "Gateway health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "Account service health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/accounts/health"
+          }
+        },
+        {
+          "name": "Transaction service health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/health"
+          }
+        },
+        {
+          "name": "Ledger service health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/ledger/health"
+          }
+        },
+        {
+          "name": "FX service health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/fx/health"
+          }
+        },
+        {
+          "name": "Payroll service health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payroll/health"
+          }
+        },
+        {
+          "name": "Admin service health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Account Service",
+      "item": [
+        {
+          "name": "Create sender wallet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('senderWalletId', json.id);",
+                  "console.log('Sender wallet ID:', json.id);",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Has wallet id', () => pm.expect(json.id).to.be.a('string'));",
+                  "pm.test('Balance is zero', () => pm.expect(json.balance).to.eql('1000.00000000'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/accounts/wallets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{senderUserId}}\",\n  \"currency\": \"USD\",\n  \"accountNumber\": \"ACC-SENDER-001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create recipient wallet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('recipientWalletId', json.id);",
+                  "console.log('Recipient wallet ID:', json.id);",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/accounts/wallets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{recipientUserId}}\",\n  \"currency\": \"USD\",\n  \"accountNumber\": \"ACC-RECIPIENT-001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get sender wallet",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/accounts/wallets/{{senderWalletId}}"
+          }
+        },
+        {
+          "name": "Get wallets by userId",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/accounts/wallets/user/{{senderUserId}}"
+          }
+        },
+        {
+          "name": "Credit sender wallet (add $1000)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Balance updated', () => pm.expect(parseFloat(json.balance)).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/accounts/wallets/{{senderWalletId}}/balance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"1000\",\n  \"operation\": \"credit\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get sender balance",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/accounts/wallets/{{senderWalletId}}/balance"
+          }
+        },
+        {
+          "name": "[FAIL] Debit more than balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 - Insufficient funds', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/accounts/wallets/{{senderWalletId}}/balance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"99999\",\n  \"operation\": \"debit\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[FAIL] Create wallet with invalid userId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 - Validation failed', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/accounts/wallets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"not-a-uuid\",\n  \"accountNumber\": \"ACC-001\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. FX Service",
+      "item": [
+        {
+          "name": "Issue FX quote (USD to EUR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('fxQuoteId', json.id);",
+                  "console.log('FX Quote ID:', json.id);",
+                  "console.log('Rate:', json.rate);",
+                  "console.log('Seconds remaining:', json.secondsRemaining);",
+                  "pm.test('Has 60s TTL', () => pm.expect(json.secondsRemaining).to.be.above(55));",
+                  "pm.test('Status is ACTIVE', () => pm.expect(json.status).to.eql('ACTIVE'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/fx/quote",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromCurrency\": \"USD\",\n  \"toCurrency\": \"EUR\",\n  \"fromAmount\": \"2000\",\n  \"userId\": \"{{senderUserId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get quote status and time remaining",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has secondsRemaining', () => pm.expect(json.secondsRemaining).to.be.a('number'));",
+                  "console.log('Time remaining:', json.secondsRemaining, 'seconds');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/fx/quote/{{fxQuoteId}}"
+          }
+        },
+        {
+          "name": "[FAIL] Issue quote with FX provider down",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 503 - Provider unavailable', () => pm.response.to.have.status(503));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/fx/quote",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromCurrency\": \"USD\",\n  \"toCurrency\": \"JPY\",\n  \"fromAmount\": \"500\",\n  \"userId\": \"{{senderUserId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Simulate FX provider DOWN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "console.log('FX provider is now DOWN — next quote request will return 503');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/fx/simulate/provider-down"
+          }
+        },
+        {
+          "name": "[FAIL] Issue quote while provider is down",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 503 - FX provider down', () => pm.response.to.have.status(503));",
+                  "console.log('Trace this request in Jaeger at http://localhost:16686');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/fx/quote",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromCurrency\": \"USD\",\n  \"toCurrency\": \"EUR\",\n  \"fromAmount\": \"2000\",\n  \"userId\": \"{{senderUserId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Simulate FX provider UP",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/fx/simulate/provider-up"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Transaction Service",
+      "item": [
+        {
+          "name": "Domestic transfer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('transactionId', json.transactionId);",
+                  "console.log('Transaction ID:', json.transactionId);",
+                  "pm.test('Status COMPLETED', () => pm.expect(json.status).to.eql('COMPLETED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "transfer-key-001" }
+            ],
+            "url": "{{baseUrl}}/transactions/transfers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderWalletId\": \"{{senderWalletId}}\",\n  \"recipientWalletId\": \"{{recipientWalletId}}\",\n  \"senderUserId\": \"{{senderUserId}}\",\n  \"recipientUserId\": \"{{recipientUserId}}\",\n  \"amount\": \"100\",\n  \"currency\": \"USD\",\n  \"description\": \"Test transfer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get transaction by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Status COMPLETED', () => pm.expect(json.status).to.eql('COMPLETED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/transfers/{{transactionId}}"
+          }
+        },
+        {
+          "name": "Scenario A — duplicate key (same request again)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Returns cached response', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Same transaction ID returned', () => pm.expect(json.transactionId).to.eql(pm.collectionVariables.get('transactionId')));",
+                  "console.log('SCENARIO A: Duplicate request returned cached response — no second debit');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "transfer-key-001" }
+            ],
+            "url": "{{baseUrl}}/transactions/transfers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderWalletId\": \"{{senderWalletId}}\",\n  \"recipientWalletId\": \"{{recipientWalletId}}\",\n  \"senderUserId\": \"{{senderUserId}}\",\n  \"recipientUserId\": \"{{recipientUserId}}\",\n  \"amount\": \"100\",\n  \"currency\": \"USD\",\n  \"description\": \"Test transfer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Scenario E — same key different amount (conflict)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 - Payload mismatch', () => pm.response.to.have.status(409));",
+                  "console.log('SCENARIO E: Same key, different payload — rejected with 409');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "transfer-key-001" }
+            ],
+            "url": "{{baseUrl}}/transactions/transfers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderWalletId\": \"{{senderWalletId}}\",\n  \"recipientWalletId\": \"{{recipientWalletId}}\",\n  \"senderUserId\": \"{{senderUserId}}\",\n  \"recipientUserId\": \"{{recipientUserId}}\",\n  \"amount\": \"800\",\n  \"currency\": \"USD\",\n  \"description\": \"Test transfer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[FAIL] Transfer without Idempotency-Key header",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 - Missing header', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/transactions/transfers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderWalletId\": \"{{senderWalletId}}\",\n  \"recipientWalletId\": \"{{recipientWalletId}}\",\n  \"senderUserId\": \"{{senderUserId}}\",\n  \"recipientUserId\": \"{{recipientUserId}}\",\n  \"amount\": \"100\",\n  \"currency\": \"USD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[FAIL] Transfer with insufficient funds",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 - Insufficient funds', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "transfer-key-insufficient" }
+            ],
+            "url": "{{baseUrl}}/transactions/transfers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderWalletId\": \"{{senderWalletId}}\",\n  \"recipientWalletId\": \"{{recipientWalletId}}\",\n  \"senderUserId\": \"{{senderUserId}}\",\n  \"recipientUserId\": \"{{recipientUserId}}\",\n  \"amount\": \"999999\",\n  \"currency\": \"USD\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Ledger Service",
+      "item": [
+        {
+          "name": "Get ledger entries for transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has 2 entries (debit + credit)', () => pm.expect(json.length).to.eql(2));",
+                  "const types = json.map(e => e.entryType);",
+                  "pm.test('Has DEBIT entry', () => pm.expect(types).to.include('DEBIT'));",
+                  "pm.test('Has CREDIT entry', () => pm.expect(types).to.include('CREDIT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/ledger/transactions/{{transactionId}}"
+          }
+        },
+        {
+          "name": "Verify ledger invariant (balanced)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Ledger is balanced', () => pm.expect(json.balanced).to.be.true);",
+                  "console.log('Double-entry invariant verified — debits equal credits');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/ledger/transactions/{{transactionId}}/verify"
+          }
+        },
+        {
+          "name": "Get wallet ledger history (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has entries array', () => pm.expect(json.entries).to.be.an('array'));",
+                  "pm.test('Has total count', () => pm.expect(json.total).to.be.a('number'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ledger/wallets/{{senderWalletId}}/entries?limit=10&offset=0",
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify audit hash chain",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Hash chain is valid', () => pm.expect(json.valid).to.be.true);",
+                  "console.log('Audit hash chain intact — no tampering detected');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/ledger/wallets/{{senderWalletId}}/chain"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Payroll Service",
+      "item": [
+        {
+          "name": "Create payroll job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('payrollJobId', json.jobId);",
+                  "console.log('Payroll Job ID:', json.jobId);",
+                  "pm.test('Status QUEUED', () => pm.expect(json.status).to.eql('QUEUED'));",
+                  "pm.test('Total items correct', () => pm.expect(json.totalItems).to.eql(3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/payroll/jobs",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employerId\": \"{{employerId}}\",\n  \"sourceWalletId\": \"{{senderWalletId}}\",\n  \"sourceUserId\": \"{{senderUserId}}\",\n  \"jobName\": \"April 2026 Payroll\",\n  \"items\": [\n    {\n      \"employeeUserId\": \"b0000000-0000-0000-0000-000000000001\",\n      \"recipientWalletId\": \"{{recipientWalletId}}\",\n      \"amount\": \"50\",\n      \"currency\": \"USD\"\n    },\n    {\n      \"employeeUserId\": \"b0000000-0000-0000-0000-000000000002\",\n      \"recipientWalletId\": \"{{recipientWalletId}}\",\n      \"amount\": \"75\",\n      \"currency\": \"USD\"\n    },\n    {\n      \"employeeUserId\": \"b0000000-0000-0000-0000-000000000003\",\n      \"recipientWalletId\": \"{{recipientWalletId}}\",\n      \"amount\": \"100\",\n      \"currency\": \"USD\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get job status and progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "console.log('Job status:', json.status);",
+                  "console.log('Progress:', json.progress);",
+                  "console.log('Checkpoint:', json.checkpoint);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payroll/jobs/{{payrollJobId}}"
+          }
+        },
+        {
+          "name": "Get job items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has 3 items', () => pm.expect(json.length).to.eql(3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payroll/jobs/{{payrollJobId}}/items"
+          }
+        },
+        {
+          "name": "Get employer jobs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payroll/employers/{{employerId}}/jobs"
+          }
+        },
+        {
+          "name": "[FAIL] Create job with empty items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 - Validation failed', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/payroll/jobs",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employerId\": \"{{employerId}}\",\n  \"sourceWalletId\": \"{{senderWalletId}}\",\n  \"sourceUserId\": \"{{senderUserId}}\",\n  \"jobName\": \"Empty Job\",\n  \"items\": []\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Admin Service",
+      "item": [
+        {
+          "name": "View wallet (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-admin-token", "value": "admin-ops-user" }],
+            "url": "{{baseUrl}}/admin/wallets/{{senderWalletId}}"
+          }
+        },
+        {
+          "name": "View transaction (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-admin-token", "value": "admin-ops-user" }],
+            "url": "{{baseUrl}}/admin/transactions/{{transactionId}}"
+          }
+        },
+        {
+          "name": "Verify ledger invariant (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Ledger balanced', () => pm.expect(json.balanced).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-admin-token", "value": "admin-ops-user" }],
+            "url": "{{baseUrl}}/admin/ledger/verify/{{transactionId}}"
+          }
+        },
+        {
+          "name": "Verify hash chain (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Hash chain valid', () => pm.expect(json.valid).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-admin-token", "value": "admin-ops-user" }],
+            "url": "{{baseUrl}}/admin/ledger/chain/{{senderWalletId}}"
+          }
+        },
+        {
+          "name": "View ledger entries (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-admin-token", "value": "admin-ops-user" }],
+            "url": "{{baseUrl}}/admin/ledger/entries/{{senderWalletId}}"
+          }
+        },
+        {
+          "name": "Get audit logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has logs array', () => pm.expect(json.logs).to.be.an('array'));",
+                  "console.log('Total audit log entries:', json.total);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-admin-token", "value": "admin-ops-user" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs?limit=20&offset=0",
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "[FAIL] Access without admin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 - Unauthorized', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/wallets/{{senderWalletId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Observability",
+      "item": [
+        {
+          "name": "Account service metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/accounts/metrics"
+          }
+        },
+        {
+          "name": "Ledger service metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/ledger/metrics"
+          }
+        },
+        {
+          "name": "Transaction service metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/metrics"
+          }
+        }
+      ]
+    }
+  ]
+}
