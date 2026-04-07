@@ -1,0 +1,45 @@
+groups:
+  - name: novapay_critical
+    rules:
+
+      # ── CRITICAL: money created or destroyed ──
+      # This must never fire in a healthy system.
+      - alert: LedgerInvariantViolation
+        expr: ledger_invariant_violations_total > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL: Ledger invariant violated"
+          description: "Money has been created or destroyed. Immediate investigation required."
+
+      - alert: HighTransactionFailureRate
+        expr: |
+          sum(rate(transaction_service_http_requests_total{status_code=~"5.."}[5m]))
+          /
+          sum(rate(transaction_service_http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Transaction failure rate above 5%"
+
+      - alert: FXProviderDown
+        expr: rate(fx_service_http_requests_total{status_code="503"}[2m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "FX provider is unavailable"
+          description: "International transfers are failing. FX provider may be down."
+
+      - alert: ServiceHighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(transaction_service_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Transaction service p99 latency above 2s"

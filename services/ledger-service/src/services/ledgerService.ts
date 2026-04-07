@@ -3,7 +3,7 @@ import { sequelize } from '../database';
 import { LedgerEntry, EntryType } from '../models/LedgerEntry';
 import { Transaction, Op } from 'sequelize';
 import Decimal from 'decimal.js';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { metrics } from '../middleware/metrics';
 
 export interface LedgerEntryInput {

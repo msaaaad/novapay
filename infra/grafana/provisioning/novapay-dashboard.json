@@ -1,0 +1,144 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Transaction Throughput (req/s)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(transaction_service_http_requests_total[1m]))",
+          "legendFormat": "req/s"
+        }
+      ],
+      "options": { "colorMode": "background", "graphMode": "area" }
+    },
+    {
+      "id": 2,
+      "title": "Failed Transaction Rate",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(transaction_service_http_requests_total{status_code=~\"5..\"}[1m]))",
+          "legendFormat": "errors/s"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "color": "green", "value": 0 },
+            { "color": "red", "value": 0.1 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Ledger Invariant Violations",
+      "description": "MUST ALWAYS BE ZERO. Any value above zero means money was created or destroyed.",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "ledger_invariant_violations_total",
+          "legendFormat": "violations"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "color": "green", "value": 0 },
+            { "color": "red", "value": 1 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Idempotency Duplicates Caught",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "idempotency_duplicate_requests_total",
+          "legendFormat": "duplicates"
+        }
+      ],
+      "options": { "colorMode": "background", "graphMode": "area" }
+    },
+    {
+      "id": 5,
+      "title": "API Latency p95 / p99 (all services)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(transaction_service_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "transaction-service p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(transaction_service_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "transaction-service p99"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ledger_service_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "ledger-service p95"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(fx_service_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "fx-service p95"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "FX Quotes Issued vs Expired",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "rate(fx_quotes_issued_total[5m])",
+          "legendFormat": "issued/s"
+        },
+        {
+          "expr": "rate(fx_quotes_expired_total[5m])",
+          "legendFormat": "expired/s"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Payroll Items Processed",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "rate(payroll_items_processed_total{status=\"COMPLETED\"}[5m])",
+          "legendFormat": "completed/s"
+        },
+        {
+          "expr": "rate(payroll_items_processed_total{status=\"FAILED\"}[5m])",
+          "legendFormat": "failed/s"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["novapay"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "NovaPay Overview",
+  "uid": "novapay-overview",
+  "version": 1
+}

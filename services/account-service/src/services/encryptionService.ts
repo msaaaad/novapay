@@ -1,5 +1,4 @@
-// src/services/encryptionService.ts
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32; // 256 bits

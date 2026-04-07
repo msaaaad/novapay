@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import client from 'prom-client';
+import * as client from 'prom-client';
 
 client.collectDefaultMetrics({ prefix: 'ledger_service_' });
 

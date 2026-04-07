@@ -1,18 +1,18 @@
-import {
-  Table, Column, Model, DataType,
-  CreatedAt, Index
-} from 'sequelize-typescript';
+import { Table, Column, Model, DataType, Index } from 'sequelize-typescript';
 
 export type EntryType = 'DEBIT' | 'CREDIT';
 export type EntryStatus = 'PENDING' | 'POSTED' | 'REVERSED';
 
-@Table({ tableName: 'ledger_entries', timestamps: false, updatedAt: false })
+@Table({
+  tableName: 'ledger_entries',
+  timestamps: true,
+  updatedAt: false,
+})
 export class LedgerEntry extends Model {
 
   @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
   declare id: string;
 
-  // Links the two sides of one transaction together
   @Index
   @Column({ type: DataType.UUID, allowNull: false })
   declare transactionId: string;
@@ -33,7 +33,6 @@ export class LedgerEntry extends Model {
   @Column({ type: DataType.STRING(3), allowNull: false, defaultValue: 'USD' })
   declare currency: string;
 
-  // For FX transfers — records the exact locked rate used
   @Column({ type: DataType.DECIMAL(20, 8), allowNull: true })
   declare lockedFxRate: string | null;
 
@@ -50,6 +49,5 @@ export class LedgerEntry extends Model {
   declare previousHash: string | null;
 
   @Index
-  @CreatedAt
   declare createdAt: Date;
 }

@@ -5,11 +5,10 @@ import { accountService } from '../services/accountService';
 
 export const accountsRouter = Router();
 
-// ── Zod schemas — validate all incoming request bodies ──
 const CreateWalletSchema = z.object({
   userId: z.string().uuid('userId must be a valid UUID'),
-  currency: z.string().length(3, 'currency must be a 3-letter ISO code').optional(),
-  accountNumber: z.string().min(1, 'accountNumber is required'),
+  currency: z.string().length(3).optional(),
+  accountNumber: z.string().min(1),
 });
 
 const UpdateBalanceSchema = z.object({
@@ -25,7 +24,11 @@ accountsRouter.post('/wallets', async (req: Request, res: Response) => {
     return;
   }
   try {
-    const wallet = await accountService.createWallet(result.data);
+    const wallet = await accountService.createWallet({
+      userId: result.data.userId,
+      currency: result.data.currency,
+      accountNumber: result.data.accountNumber,
+    })
     res.status(201).json(wallet.toSafeJSON());
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

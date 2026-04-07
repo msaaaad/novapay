@@ -1,6 +1,6 @@
 // src/middleware/metrics.ts
 import { Request, Response, NextFunction } from 'express';
-import client from 'prom-client';
+import * as client from 'prom-client';
 
 // Collect default Node.js metrics (memory, CPU, event loop lag)
 client.collectDefaultMetrics({ prefix: 'account_service_' });

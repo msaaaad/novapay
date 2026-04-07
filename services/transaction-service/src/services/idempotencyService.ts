@@ -1,6 +1,6 @@
 import { IdempotencyKey } from '../models/IdempotencyKey';
 import { sequelize } from '../database';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 
 const KEY_TTL_HOURS = 24;

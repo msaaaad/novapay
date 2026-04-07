@@ -100,3 +100,13 @@ fxRouter.post('/quote/:id/consume', async (req: Request, res: Response) => {
     res.status(500).json({ error: message });
   }
 });
+
+fxRouter.post('/simulate/provider-down', (_req: Request, res: Response) => {
+  process.env['FX_PROVIDER_DOWN'] = 'true';
+  res.json({ message: 'FX provider marked as down. POST /quote will now return 503.' });
+});
+
+fxRouter.post('/simulate/provider-up', (_req: Request, res: Response) => {
+  process.env['FX_PROVIDER_DOWN'] = 'false';
+  res.json({ message: 'FX provider restored.' });
+});

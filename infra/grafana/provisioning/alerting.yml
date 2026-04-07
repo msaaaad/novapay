@@ -1,0 +1,14 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: novapay-alerts
+    receivers:
+      - uid: novapay-default
+        type: email
+        settings:
+          addresses: ops@novapay.internal
+
+policies:
+  - orgId: 1
+    receiver: novapay-alerts
